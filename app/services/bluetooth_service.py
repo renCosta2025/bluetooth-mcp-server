@@ -408,6 +408,16 @@ class BluetoothService:
             self._names_match(device1["name"], device2["name"])):
             return True
         
+        # Cas 2.5: Noms décodés qui correspondent
+        if device1.get("name") and device2.get("name"):
+            from app.utils.bluetooth_utils import decode_ascii_name
+            decoded_name1 = decode_ascii_name(device1["name"])
+            decoded_name2 = decode_ascii_name(device2["name"])
+            
+            if decoded_name1 != device1["name"] or decoded_name2 != device2["name"]:
+                if decoded_name1 and decoded_name2 and self._names_match(decoded_name1, decoded_name2):
+                    return True
+        
         # Cas 3: Nom convivial identique et non générique
         if (device1.get("friendly_name") and device2.get("friendly_name") and
             "Device" not in device1["friendly_name"] and "Device" not in device2["friendly_name"] and

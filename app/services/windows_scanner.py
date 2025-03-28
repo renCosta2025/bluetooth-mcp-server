@@ -10,6 +10,7 @@ import time
 import os
 import asyncio
 from typing import Dict, List, Optional, Any
+from app.utils.bluetooth_utils import decode_ascii_name
 
 from app.utils.bluetooth_utils import get_friendly_device_name
 from app.data.mac_prefixes import get_device_info
@@ -609,6 +610,12 @@ class WindowsBTScanner:
                     if filter_name is not None and filter_name.lower() not in name.lower():
                         continue
                     
+                    # Tenter de décoder le nom si c'est une séquence de chiffres séparés par des espaces
+                    decoded_name = decode_ascii_name(name)
+                    if decoded_name != name:
+                        logger.debug(f"Nom décodé de {name} en {decoded_name}")
+                        name = decoded_name
+
                     # Si le nom contient "free" ou "freebox", c'est potentiellement une Freebox
                     if "free" in name.lower() or "freebox" in name.lower():
                         logger.info(f"Freebox trouvée dans le registre (nom générique): {name}")
@@ -654,7 +661,7 @@ class WindowsBTScanner:
                             "appearance": None,
                             "company_name": "Unknown (Windows)",
                             "device_type": "Windows-Registry",
-                            "friendly_name": name,
+                            "friendly_name": name,  # Utiliser le nom décodé comme nom convivial
                             "detected_by": "windows_registry",
                             "raw_info": f"Registry ID: {reg_id}"
                         }

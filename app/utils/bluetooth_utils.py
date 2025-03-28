@@ -86,6 +86,39 @@ def bytes_to_hex_string(data: bytes) -> str:
         return ""
     return ' '.join([f"{b:02X}" for b in data])
 
+def decode_ascii_name(encoded_name: str) -> str:
+    """
+    Décode une chaîne de caractères représentant des codes ASCII séparés par des espaces.
+    
+    Args:
+        encoded_name: Chaîne encodée (ex: "105 80 104 111 110 101 0")
+        
+    Returns:
+        Chaîne décodée (ex: "iPhone")
+    """
+    if not encoded_name or not isinstance(encoded_name, str):
+        return encoded_name
+        
+    # Vérifier si la chaîne ressemble à des codes ASCII
+    if not all(c.isdigit() or c.isspace() for c in encoded_name):
+        return encoded_name
+        
+    try:
+        # Convertir les codes ASCII en caractères
+        values = [int(code) for code in encoded_name.split() if code.isdigit()]
+        # Arrêter au premier 0 (null terminator)
+        if 0 in values:
+            values = values[:values.index(0)]
+        # Convertir en chaîne de caractères si les valeurs sont dans la plage ASCII imprimable
+        decoded = ''.join(chr(code) for code in values if 32 <= code <= 126)
+        
+        # Retourner la chaîne décodée seulement si elle contient au moins 2 caractères et semble être un nom valide
+        if len(decoded) >= 2 and any(c.isalpha() for c in decoded):
+            return decoded
+        return encoded_name
+    except Exception:
+        return encoded_name
+
 def get_friendly_device_name(device_name: str, mac_address: str, manufacturer_data: Dict = None) -> str:
     """
     Détermine un nom convivial pour l'appareil basé sur diverses sources d'information.
@@ -98,6 +131,12 @@ def get_friendly_device_name(device_name: str, mac_address: str, manufacturer_da
     Returns:
         Nom convivial de l'appareil
     """
+    # Tenter de décoder le nom ASCII si applicable
+    if device_name and " " in device_name and all(c.isdigit() or c.isspace() for c in device_name):
+        decoded_name = decode_ascii_name(device_name)
+        if decoded_name != device_name:
+            return decoded_name
+            
     # Vérifier si le nom de l'appareil est déjà significatif
     if device_name and device_name != "Unknown":
         return device_name
@@ -160,12 +199,30 @@ def merge_device_info(ble_device: Dict[str, Any], classic_device: Dict[str, Any]
     
     # Pour certains champs, prendre le plus informatif des deux
     # Fusionner les noms en priorisant les noms significatifs
+    
+    # Tenter de décoder les noms ASCII encodés
+    if weaker_device.get("name") and " " in weaker_device["name"]:
+        decoded_name = decode_ascii_name(weaker_device["name"])
+        if decoded_name != weaker_device["name"]:
+            if not merged.get("name") or merged["name"] == "Unknown":
+                merged["name"] = decoded_name
+    
+    # Nom normal
     if weaker_device.get("name") and weaker_device["name"] != "Unknown" and (not merged.get("name") or merged["name"] == "Unknown"):
         merged["name"] = weaker_device["name"]
     
     # Utiliser le nom convivial le plus informatif
-    if weaker_device.get("friendly_name") and (not merged.get("friendly_name") or len(weaker_device["friendly_name"]) > len(merged["friendly_name"])):
-        merged["friendly_name"] = weaker_device["friendly_name"]
+    if weaker_device.get("friendly_name"):
+        # Décoder les friendly_names encodés en ASCII
+        if " " in weaker_device["friendly_name"]:
+            decoded_friendly = decode_ascii_name(weaker_device["friendly_name"])
+            if decoded_friendly != weaker_device["friendly_name"]:
+                if not merged.get("friendly_name") or "Device" in merged["friendly_name"]:
+                    merged["friendly_name"] = decoded_friendly
+        
+        # Nom convivial normal
+        if not merged.get("friendly_name") or len(weaker_device["friendly_name"]) > len(merged["friendly_name"]):
+            merged["friendly_name"] = weaker_device["friendly_name"]
     
     # Prendre les informations du fabricant si disponibles
     if weaker_device.get("company_name") and not merged.get("company_name"):
@@ -209,6 +266,12 @@ def merge_device_info(ble_device: Dict[str, Any], classic_device: Dict[str, Any]
     
     if weaker_device.get("source_id") and weaker_device["source_id"] not in merged["merged_from"]:
         merged["merged_from"].append(weaker_device["source_id"])
+    
+    # Si weaker_device a son propre merged_from, fusionner ces IDs également
+    if weaker_device.get("merged_from"):
+        for source_id in weaker_device["merged_from"]:
+            if source_id not in merged["merged_from"]:
+                merged["merged_from"].append(source_id)
     
     # Si les merged_from n'ont pas été définis mais que les IDs sont disponibles
     if not merged["merged_from"]:
