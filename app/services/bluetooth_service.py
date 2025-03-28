@@ -11,6 +11,7 @@ from typing import List, Optional, Dict, Any, Set
 
 from app.models.bluetooth import BluetoothDevice
 from app.services.ble_scanner import ble_scanner
+from app.services.windows_advanced_scanner import windows_advanced_scanner
 from app.services.classic_scanner import classic_scanner, CLASSIC_BT_AVAILABLE
 from app.utils.bluetooth_utils import merge_device_info, normalize_mac_address
 
@@ -84,6 +85,10 @@ class BluetoothService:
                 # 3. Sur Windows, scanner spécifique (si demandé)
                 if IS_WINDOWS and extended_freebox_detection:
                     tasks.append(self._windows_scan_task(duration, filter_name))
+                    
+                # 4. Sur Windows, scanner avancé pour détecter plus d'appareils (TV, Freebox, etc.)
+                if IS_WINDOWS and extended_freebox_detection:
+                    tasks.append(self._windows_advanced_scan_task(duration, filter_name))
                 
                 # Attendre que tous les scans se terminent
                 scan_results = await asyncio.gather(*tasks, return_exceptions=True)
@@ -180,6 +185,37 @@ class BluetoothService:
                         
                     except Exception as e:
                         logger.error(f"Erreur lors du scan Windows: {str(e)}")
+                    
+                # 4. Sur Windows, scanner avancé pour détecter plus d'appareils (TV, Freebox, etc.)
+                if IS_WINDOWS and extended_freebox_detection:
+                    logger.debug("Démarrage du scan Windows avancé...")
+                    try:
+                        # Ce scanner a besoin de plus de temps pour détecter les appareils spéciaux
+                        windows_advanced_devices = windows_advanced_scanner.scan(duration * 2, filter_name)
+                        
+                        # Traiter les appareils Windows avancés
+                        for device in windows_advanced_devices:
+                            device_id = device["id"]
+                            device["source_id"] = device_id
+                            device["detected_by"] = device.get("detected_by", "windows_advanced_scanner")
+                            
+                            if deduplicate_devices:
+                                # Vérifier si cet appareil est déjà connu
+                                if device_id in all_devices:
+                                    all_devices[device_id] = merge_device_info(all_devices[device_id], device)
+                                elif self._find_matching_device(device, all_devices):
+                                    # Appareil similaire trouvé, fusion
+                                    match_id = self._find_matching_device(device, all_devices)
+                                    all_devices[match_id] = merge_device_info(all_devices[match_id], device)
+                                else:
+                                    # Nouvel appareil
+                                    all_devices[device_id] = device
+                            else:
+                                # Sans déduplication
+                                all_devices[device_id] = device
+                        
+                    except Exception as e:
+                        logger.error(f"Erreur lors du scan Windows avancé: {str(e)}")
             
             # Déduplication finale basée sur les critères avancés si demandé
             if deduplicate_devices:
@@ -193,6 +229,24 @@ class BluetoothService:
         except Exception as e:
             logger.error(f"Erreur lors du scan Bluetooth: {str(e)}", exc_info=True)
             raise BluetoothScanError(f"Erreur lors du scan Bluetooth: {str(e)}")
+
+    async def _windows_advanced_scan_task(self, duration: float, filter_name: Optional[str]) -> List[Dict[str, Any]]:
+        """Tâche asynchrone pour le scan Windows avancé"""
+        try:
+            logger.debug("Démarrage du scan Windows avancé asynchrone...")
+            devices = await windows_advanced_scanner.scan_async(duration, filter_name)
+            
+            # Marquer les appareils avec leur source
+            for device in devices:
+                device["source_id"] = device["id"]
+                if "detected_by" not in device:
+                    device["detected_by"] = "windows_advanced_scanner"
+                
+            logger.debug(f"Scan Windows avancé terminé. {len(devices)} appareil(s) trouvé(s)")
+            return devices
+        except Exception as e:
+            logger.error(f"Erreur lors du scan Windows avancé: {str(e)}")
+            return []
 
     async def _ble_scan_task(self, duration: float, filter_name: Optional[str], connect_for_details: bool) -> List[Dict[str, Any]]:
         """Tâche asynchrone pour le scan BLE"""
