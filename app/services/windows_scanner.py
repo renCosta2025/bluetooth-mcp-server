@@ -89,7 +89,10 @@ class WindowsBTScanner:
                             logger.info(f"Freebox trouvée via Get-PnpDevice: {name}")
                             
                         # Créer un ID unique pour l'appareil
-                        unique_id = f"WIN-PNP-{device_id.replace('&', '-').replace('\\', '-')}"
+                        # Solution: Traiter les remplacements avant le f-string
+                        device_id_clean = device_id.replace('&', '-')
+                        device_id_clean = device_id_clean.replace('\\', '-')
+                        unique_id = f"WIN-PNP-{device_id_clean}"
                         
                         # Ajouter l'appareil au dictionnaire
                         all_devices[unique_id] = {
@@ -189,7 +192,10 @@ class WindowsBTScanner:
                             logger.info(f"Freebox trouvée via BluetoothAdapter: {name}")
                             
                         # Créer un ID unique pour l'appareil
-                        unique_id = f"WIN-BT-{device_id.replace('#', '-').replace('\\', '-')[-17:]}"
+                        # Solution: Traiter les remplacements avant le f-string
+                        device_id_clean = device_id.replace('#', '-')
+                        device_id_clean = device_id_clean[-17:] if len(device_id_clean) > 17 else device_id_clean
+                        unique_id = f"WIN-BT-{device_id_clean}"
                         
                         # Extraire l'adresse MAC potentielle du device_id
                         mac_match = re.search(r'([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})', device_id)
@@ -265,7 +271,11 @@ class WindowsBTScanner:
                             logger.info(f"Freebox trouvée via WMI: {name}")
                             
                         # Créer un ID unique pour l'appareil
-                        unique_id = f"WIN-WMI-{device_id.replace('&', '-').replace('\\', '-')}"
+                        # Alternative: fonction de remplacement séparée
+                        device_id_clean = device_id.replace('&', '-')
+                        # Utiliser string.replace() pour remplacer les backslash
+                        device_id_clean = device_id_clean.replace('\\', '-')
+                        unique_id = f"WIN-WMI-{device_id_clean}"
                         
                         # Ajouter l'appareil au dictionnaire s'il n'existe pas déjà
                         if unique_id not in all_devices:
