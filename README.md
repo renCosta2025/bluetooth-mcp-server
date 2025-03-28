@@ -1,129 +1,157 @@
-# Serveur MCP Bluetooth
+# Bluetooth MCP Server
 
-Ce projet est un serveur ModelContextProtocol (MCP) qui permet à Claude AI de détecter les appareils Bluetooth à proximité. Implémenté selon la méthodologie TDD (Test-Driven Development), il offre une interface robuste et testée pour l'interaction avec les périphériques Bluetooth.
+<div align="center">
 
-## Fonctionnalités
+![Bluetooth Logo](https://img.shields.io/badge/Bluetooth-MCP-blue?style=for-the-badge&logo=bluetooth&logoColor=white)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Python Version](https://img.shields.io/badge/Python-3.7%2B-blue)](https://www.python.org/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.68.0%2B-green)](https://fastapi.tiangolo.com/)
+[![TDD](https://img.shields.io/badge/TDD-Driven-red)](https://en.wikipedia.org/wiki/Test-driven_development)
 
-- Scanner les appareils Bluetooth à proximité (BLE et Classic)
-- Filtrer les appareils par nom
-- Détecter automatiquement les appareils spéciaux (Freebox, TV, etc.)
-- Obtenir des informations détaillées sur les appareils (fabricant, type, etc.)
-- Support multiplateforme (Windows, Linux, macOS)
-- Optimisations spécifiques pour Windows
-- Interface MCP compatible avec Claude AI
+**Model Context Protocol Server for Bluetooth Device Detection**
 
-## Prérequis
+</div>
 
-- Python 3.7+
-- Un adaptateur Bluetooth compatible (intégré ou externe)
-- Droits administrateur/sudo (nécessaires pour certaines opérations Bluetooth)
-- Connexion Internet (pour l'installation des packages)
+## 🔍 Overview
 
-## Installation
+This project implements a Model Context Protocol (MCP) server that enables Claude and other AI assistants to scan and interact with Bluetooth devices in your vicinity. Built with a Test-Driven Development approach, it provides a robust, tested interface for Bluetooth operations across multiple platforms.
 
-1. Cloner le dépôt :
-   ```bash
-   git clone https://github.com/votre-username/bluetooth-mcp-server.git
-   cd bluetooth-mcp-server
+## ✨ Features
 
-Créer et activer un environnement virtuel :
-bashCopier# Créer l'environnement virtuel
+- 📡 **Multi-protocol scanning**: Detect both BLE and Classic Bluetooth devices
+- 🔎 **Flexible filtering**: Filter devices by name, type, or other attributes
+- 🔄 **Automatic device recognition**: Identify and categorize common devices (like Freebox, TVs, etc.)
+- 📱 **Enhanced device information**: Get manufacturer info, device type, and detailed characteristics
+- 🖥️ **Cross-platform support**: Works on Windows, macOS, and Linux
+- ⚡ **Platform-specific optimizations**: Enhanced detection capabilities on Windows
+- 🤖 **MCP Integration**: Seamless integration with Claude and compatible AI assistants
+
+## 📋 Requirements
+
+- **Python 3.7+**
+- **Bluetooth adapter** (built-in or external)
+- **Admin/sudo privileges** (required for some Bluetooth operations)
+- **Internet connection** (for package installation)
+
+## 🚀 Quick Start
+
+### Installation
+
+```bash
+# Clone the repository
+git clone https://github.com/yourusername/bluetooth-mcp-server.git
+cd bluetooth-mcp-server
+
+# Create and activate virtual environment
 python -m venv venv
 
-# Activer l'environnement virtuel
-# Sur Windows
+# On Windows
 venv\Scripts\activate
-# Sur macOS/Linux
+# On macOS/Linux
 source venv/bin/activate
 
-Installer les dépendances :
-bashCopierpip install -r requirements.txt
+# Install dependencies
+pip install -r requirements.txt
 
-Configurer les variables d'environnement :
-bashCopier# Copier le fichier d'exemple
+# Configure environment variables
 cp .env.example .env
+# Edit the .env file as needed
+```
 
-# Éditer selon vos besoins
-nano .env
+### Running the Server
 
-
-Démarrage du serveur
-API Bluetooth
-bashCopier# Méthode simple
+```bash
+# Start the Bluetooth API server
 python run.py
 
-# Alternative avec uvicorn directement
-uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
-Serveur MCP
-bashCopier# Démarrer le serveur MCP
+# In another terminal, start the MCP server
 python bluetooth_mcp_server.py
-Utilisation avec Claude
+```
 
-Exposer le serveur à Internet via ngrok ou un déploiement sur un serveur :
-bashCopierngrok http 8000
+### Using with Claude
 
-Configurer le MCP dans Claude :
-bashCopiernpx @anthropic-ai/sdk install-model-context-protocol <URL_DU_SERVEUR>
+1. Expose your server to the internet using ngrok or deploy it to a server:
+   ```bash
+   ngrok http 8000
+   ```
 
-Une fois configuré, vous pouvez demander à Claude d'utiliser l'outil Bluetooth :
-CopierPeux-tu scanner les appareils Bluetooth à proximité ?
+2. Configure Claude to use your MCP server:
+   ```bash
+   npx @anthropic-ai/sdk install-model-context-protocol <YOUR_SERVER_URL>
+   ```
 
+3. Ask Claude to scan for Bluetooth devices:
+   ```
+   Could you scan for nearby Bluetooth devices?
+   ```
 
-Tests
-Ce projet est développé suivant l'approche TDD (Test-Driven Development). Pour exécuter les tests :
-bashCopier# Exécuter tous les tests
+## 🧪 Testing
+
+This project follows a Test-Driven Development (TDD) approach with comprehensive test coverage:
+
+```bash
+# Run all tests
 pytest
 
-# Exécuter des tests spécifiques
-pytest tests/api/  # Tests des API
-pytest tests/models/  # Tests des modèles
-pytest tests/services/  # Tests des services
-Structure du projet
-Le projet suit une architecture modulaire avec séparation claire des responsabilités :
+# Run specific test categories
+pytest tests/api/       # API tests
+pytest tests/models/    # Data model tests
+pytest tests/services/  # Service logic tests
+pytest tests/utils/     # Utility function tests
+```
 
-app/ : Application principale
+## 🏗️ Architecture
 
-api/ : Endpoints FastAPI
-models/ : Modèles de données
-services/ : Logique métier
-utils/ : Fonctions utilitaires
-data/ : Données statiques (identifiants Bluetooth, etc.)
+The project follows a modular architecture with clear separation of concerns:
 
+```
+bluetooth-mcp-server/
+├── app/                # Main application package
+│   ├── api/            # FastAPI endpoints
+│   ├── core/           # Core configuration
+│   ├── data/           # Static data (Bluetooth identifiers, etc.)
+│   ├── models/         # Data models
+│   ├── services/       # Business logic
+│   └── utils/          # Utility functions
+├── mcp_sdk/            # MCP integration SDK
+└── tests/              # Test suites
+```
 
-mcp_sdk/ : SDK pour intégration MCP
-tests/ : Tests unitaires et d'intégration
+For detailed architecture information, see [architecture.md](architecture.md).
 
-Pour une description détaillée, voir architecture.md.
-Fonctionnement
+## 🔧 Troubleshooting
 
-API Bluetooth : Fournit des endpoints REST pour scanner les appareils Bluetooth
-Serveur MCP : Implémente le protocole MCP pour permettre à Claude d'utiliser l'API Bluetooth
-SDK MCP : Permet d'intégrer l'outil Bluetooth dans d'autres applications compatibles MCP
+### Bluetooth Issues
 
-Dépannage
-Problèmes Bluetooth
+- **"Access denied" errors**: Run the server with admin/sudo privileges
+- **Adapter not detected**: Ensure Bluetooth is enabled in your system settings
+- **No devices found**: Make sure there are discoverable Bluetooth devices nearby
+- **Windows-specific issues**: Check that Bluetooth services are active (`services.msc`)
 
-Erreur "Access denied" : Exécutez le serveur avec des privilèges administrateur ou sudo
-Adaptateur non détecté : Vérifiez que le Bluetooth est activé dans les paramètres de votre système
-Scan ne trouve aucun appareil : Assurez-vous que des appareils Bluetooth à proximité sont en mode découvrable
-Problèmes sur Windows : Vérifiez que les services Bluetooth sont activés (services.msc)
+### MCP Issues
 
-Problèmes MCP
+- **Tool not detected by Claude**: Verify your MCP server URL is correct and accessible
+- **Execution errors**: Check the server logs for detailed error information
 
-Claude ne détecte pas l'outil : Vérifiez que l'URL du serveur MCP est correcte et accessible
-Erreurs d'exécution : Consultez les logs du serveur pour plus de détails
+## 👥 Contributing
 
-Contribuer
-Les contributions sont les bienvenues ! Veuillez suivre ces étapes :
+Contributions are welcome! Please follow these steps:
 
-Forker le projet
-Créer une branche (git checkout -b feature/amazing-feature)
-Écrire des tests pour votre fonctionnalité
-Implémenter votre fonctionnalité
-Vérifier que tous les tests passent
-Committer vos changements (git commit -m 'Add amazing feature')
-Pousser vers la branche (git push origin feature/amazing-feature)
-Ouvrir une Pull Request
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Write tests for your feature
+4. Implement your feature
+5. Ensure all tests pass
+6. Commit your changes (`git commit -m 'Add amazing feature'`)
+7. Push to the branch (`git push origin feature/amazing-feature`)
+8. Open a Pull Request
 
-Licence
-MIT
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🙏 Acknowledgements
+
+- [FastAPI](https://fastapi.tiangolo.com/) for the API framework
+- [Bleak](https://github.com/hbldh/bleak) for cross-platform Bluetooth functionality
+- [Anthropic Claude](https://www.anthropic.com/claude) for MCP integration support
