@@ -17,7 +17,6 @@ from app.utils.bluetooth_utils import (
 )
 from app.data.company_identifiers import get_company_name
 from app.data.mac_prefixes import get_device_info, MAC_PREFIX_DATABASE
-from app.models.bluetooth import BluetoothDevice
 
 # Configurer le logging
 logger = logging.getLogger(__name__)
@@ -65,6 +64,12 @@ class BLEScanner:
                           if "Freebox" in info.get("friendly_name", "")]
         
         devices = []
+        
+        # Si connect_for_details est activé et qu'il y a beaucoup d'appareils, limiter les connexions
+        # pour éviter de bloquer trop longtemps
+        connection_limit = 5 if len(discovered_devices_with_ads) > 10 else len(discovered_devices_with_ads)
+        connected_count = 0
+        
         for address, (device, adv_data) in discovered_devices_with_ads.items():
             device_name = device.name or "Unknown"
             
@@ -123,26 +128,36 @@ class BLEScanner:
                     "is_connectable": getattr(adv_data, 'connectable', None),
                     "device_type": "BLE",
                     "friendly_name": friendly_name,
+                    "detected_by": "ble_scanner",
                     "is_freebox": is_freebox  # Marqueur spécial pour les Freebox
                 }
                 
-                # Si c'est une Freebox, toujours essayer de se connecter pour confirmer
+                # Si c'est une Freebox, priorité de connexion
                 if is_freebox and connect_for_details:
                     logger.info(f"Freebox détectée à l'adresse {device.address}, tentative de connexion...")
-                
-                # Si demandé, essayer de se connecter pour obtenir plus d'informations
-                if connect_for_details:
+                    connected_count += 1  # Compter même si on dépasse la limite pour les Freebox
+                    
                     try:
-                        logger.debug(f"Tentative de connexion à {device.address}")
                         detailed_info = await self._get_detailed_device_info(device)
                         bluetooth_device["connected_info"] = detailed_info.get("info", {})
                         bluetooth_device["services"] = detailed_info.get("services", [])
                         bluetooth_device["characteristics"] = detailed_info.get("characteristics", [])
                         
-                        # Si connexion réussie à une potentielle Freebox, confirmer son identité
-                        if detailed_info.get("info", {}).get("connected", False) and is_freebox:
-                            logger.info(f"Connexion réussie à la Freebox {device.address}")
-                            
+                        logger.debug(f"Connexion réussie à la Freebox {device.address}")
+                    except Exception as e:
+                        logger.warning(f"Impossible de se connecter à la Freebox {device.address}: {str(e)}")
+                
+                # Si demandé et dans la limite, essayer de se connecter pour obtenir plus d'informations
+                elif connect_for_details and connected_count < connection_limit:
+                    try:
+                        logger.debug(f"Tentative de connexion à {device.address}")
+                        connected_count += 1
+                        
+                        detailed_info = await self._get_detailed_device_info(device)
+                        bluetooth_device["connected_info"] = detailed_info.get("info", {})
+                        bluetooth_device["services"] = detailed_info.get("services", [])
+                        bluetooth_device["characteristics"] = detailed_info.get("characteristics", [])
+                        
                         logger.debug(f"Connexion réussie à {device.address}")
                     except Exception as e:
                         logger.warning(f"Impossible de se connecter à {device.address}: {str(e)}")

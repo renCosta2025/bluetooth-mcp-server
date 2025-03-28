@@ -24,7 +24,7 @@ class BluetoothDevice(BaseModel):
     characteristics: Optional[List[Dict[str, Any]]] = None
     
     # Informations déduites
-    device_type: Optional[str] = None  # "BLE", "Classic" ou "BLE+Classic"
+    device_type: Optional[str] = None  # "BLE", "Classic", "BLE+Classic", "Windows-PnP", etc.
     company_name: Optional[str] = None
     is_connectable: Optional[bool] = None
     device_class: Optional[int] = None  # Pour le Bluetooth classique
@@ -34,9 +34,14 @@ class BluetoothDevice(BaseModel):
     friendly_name: Optional[str] = None  # Nom plus convivial basé sur d'autres informations
     
     # Informations de détection
-    detected_by: Optional[str] = None  # Méthode de détection
+    detected_by: Optional[str] = None  # Méthode de détection principale
+    detection_sources: Optional[List[str]] = None  # Toutes les sources de détection
     raw_info: Optional[str] = None  # Informations brutes de détection
     detection_note: Optional[str] = None  # Note sur la détection
+    
+    # Informations de fusion
+    source_id: Optional[str] = None  # ID d'origine avant fusion
+    merged_from: Optional[List[str]] = None  # Liste des IDs des appareils fusionnés
     
     # Pour Pydantic v2, utiliser model_config au lieu de Config avec json_schema_extra
     model_config = {
@@ -51,7 +56,9 @@ class BluetoothDevice(BaseModel):
                 "tx_power": -59,
                 "device_type": "BLE",
                 "company_name": "Apple, Inc.",
-                "friendly_name": "iPhone 13"
+                "friendly_name": "iPhone 13",
+                "detection_sources": ["ble_scanner", "windows_registry"],
+                "merged_from": ["00:11:22:33:44:55", "WIN-REG-001122334455"]
             }
         }
     }
@@ -63,6 +70,8 @@ class BluetoothScanParams(BaseModel):
     connect_for_details: Optional[bool] = False  # Si True, tente de se connecter pour plus d'informations
     include_classic: Optional[bool] = True  # Si True, inclut les appareils Bluetooth classiques
     extended_freebox_detection: Optional[bool] = True  # Si True, active la détection spéciale de la Freebox
+    deduplicate_devices: Optional[bool] = True  # Si True, fusionne les appareils en double
+    parallel_scans: Optional[bool] = True  # Si True, exécute les scans en parallèle pour plus de rapidité
     
     @validator('duration')
     def duration_must_be_positive(cls, v):

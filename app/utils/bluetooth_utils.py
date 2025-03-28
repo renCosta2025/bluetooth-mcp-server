@@ -123,14 +123,15 @@ def get_friendly_device_name(device_name: str, mac_address: str, manufacturer_da
     # Dernière solution : utiliser juste l'adresse MAC
     return f"BT Device {mac_address[-8:]}"
 
-def merge_device_info(ble_device: Dict[str, Any], classic_device: Dict[str, Any]) -> Dict[str, Any]:
+def merge_device_info(ble_device: Dict[str, Any], classic_device: Dict[str, Any], prioritize_high_rssi: bool = True) -> Dict[str, Any]:
     """
     Fusionne les informations de deux appareils (BLE et classique) en un seul appareil.
-    Priorise les informations les plus complètes.
+    Priorise les informations les plus complètes et les signaux les plus forts.
     
     Args:
         ble_device: Informations de l'appareil BLE
         classic_device: Informations de l'appareil Bluetooth classique
+        prioritize_high_rssi: Si True, priorise l'appareil avec le RSSI le plus fort
         
     Returns:
         Informations fusionnées
@@ -139,30 +140,108 @@ def merge_device_info(ble_device: Dict[str, Any], classic_device: Dict[str, Any]
         return classic_device
     if not classic_device:
         return ble_device
-        
-    # Copier l'appareil BLE comme base
-    merged = ble_device.copy()
     
-    # Utiliser les informations de l'appareil classique si manquantes dans BLE
-    for key, value in classic_device.items():
-        if key not in merged or merged[key] is None or merged[key] == "" or merged[key] == 0:
+    # Déterminer quel appareil a le signal le plus fort (RSSI plus proche de 0)
+    stronger_device = ble_device
+    weaker_device = classic_device
+    
+    if prioritize_high_rssi and "rssi" in ble_device and "rssi" in classic_device:
+        if classic_device["rssi"] is not None and (ble_device["rssi"] is None or abs(classic_device["rssi"]) < abs(ble_device["rssi"])):
+            stronger_device = classic_device
+            weaker_device = ble_device
+    
+    # Copier l'appareil avec le signal le plus fort comme base
+    merged = stronger_device.copy()
+    
+    # Utiliser les informations de l'autre appareil si manquantes dans l'appareil principal
+    for key, value in weaker_device.items():
+        if key not in merged or merged[key] is None or merged[key] == "" or merged[key] == 0 or merged[key] == []:
             merged[key] = value
     
     # Pour certains champs, prendre le plus informatif des deux
-    if classic_device.get("name") and classic_device["name"] != "Unknown" and (not merged.get("name") or merged["name"] == "Unknown"):
-        merged["name"] = classic_device["name"]
+    # Fusionner les noms en priorisant les noms significatifs
+    if weaker_device.get("name") and weaker_device["name"] != "Unknown" and (not merged.get("name") or merged["name"] == "Unknown"):
+        merged["name"] = weaker_device["name"]
     
-    if classic_device.get("friendly_name") and not merged.get("friendly_name"):
-        merged["friendly_name"] = classic_device["friendly_name"]
+    # Utiliser le nom convivial le plus informatif
+    if weaker_device.get("friendly_name") and (not merged.get("friendly_name") or len(weaker_device["friendly_name"]) > len(merged["friendly_name"])):
+        merged["friendly_name"] = weaker_device["friendly_name"]
     
-    if classic_device.get("company_name") and not merged.get("company_name"):
-        merged["company_name"] = classic_device["company_name"]
-        
-    # Prendre le RSSI le plus fort (plus proche de 0)
-    if "rssi" in merged and "rssi" in classic_device:
-        merged["rssi"] = max(merged["rssi"], classic_device["rssi"], key=lambda x: abs(x) if x is not None else float('inf'))
+    # Prendre les informations du fabricant si disponibles
+    if weaker_device.get("company_name") and not merged.get("company_name"):
+        merged["company_name"] = weaker_device["company_name"]
     
-    # Indiquer que c'est une fusion
-    merged["device_type"] = "BLE+Classic"
-        
+    # Fusionner les manufacturer_data si présents dans les deux appareils
+    if "manufacturer_data" in merged and "manufacturer_data" in weaker_device:
+        for key, value in weaker_device["manufacturer_data"].items():
+            if key not in merged["manufacturer_data"]:
+                merged["manufacturer_data"][key] = value
+    
+    # Fusionner les service_uuids sans doublons
+    if "service_uuids" in merged and "service_uuids" in weaker_device and weaker_device["service_uuids"]:
+        merged_uuids = set(merged["service_uuids"])
+        merged_uuids.update(weaker_device["service_uuids"])
+        merged["service_uuids"] = list(merged_uuids)
+    
+    # Fusionner les service_data
+    if "service_data" in merged and "service_data" in weaker_device:
+        for key, value in weaker_device["service_data"].items():
+            if key not in merged["service_data"]:
+                merged["service_data"][key] = value
+    
+    # Conserver les informations de détection pour traçabilité
+    if "detection_sources" not in merged:
+        merged["detection_sources"] = []
+    
+    if merged.get("detected_by") and merged["detected_by"] not in merged["detection_sources"]:
+        merged["detection_sources"].append(merged["detected_by"])
+    
+    if weaker_device.get("detected_by") and weaker_device["detected_by"] not in merged["detection_sources"]:
+        merged["detection_sources"].append(weaker_device["detected_by"])
+    
+    # Conserver les IDs d'origine pour traçabilité
+    if "merged_from" not in merged:
+        merged["merged_from"] = []
+    
+    # Ajouter l'ID d'origine si disponible
+    if merged.get("source_id") and merged["source_id"] not in merged["merged_from"]:
+        merged["merged_from"].append(merged["source_id"])
+    
+    if weaker_device.get("source_id") and weaker_device["source_id"] not in merged["merged_from"]:
+        merged["merged_from"].append(weaker_device["source_id"])
+    
+    # Si les merged_from n'ont pas été définis mais que les IDs sont disponibles
+    if not merged["merged_from"]:
+        if merged.get("id"):
+            merged["merged_from"].append(merged["id"])
+        if weaker_device.get("id") and weaker_device["id"] != merged.get("id"):
+            merged["merged_from"].append(weaker_device["id"])
+    
+    # Indiquer que c'est une fusion dans le device_type
+    if "device_type" in merged and "device_type" in weaker_device and merged["device_type"] != weaker_device["device_type"]:
+        types = set()
+        if "+" in merged["device_type"]:
+            types.update(merged["device_type"].split("+"))
+        else:
+            types.add(merged["device_type"])
+            
+        if "+" in weaker_device["device_type"]:
+            types.update(weaker_device["device_type"].split("+"))
+        else:
+            types.add(weaker_device["device_type"])
+            
+        merged["device_type"] = "+".join(sorted(types))
+    
+    # Si le weaker_device a des informations de connexion que le merged n'a pas, les ajouter
+    if weaker_device.get("connected_info") and not merged.get("connected_info"):
+        merged["connected_info"] = weaker_device["connected_info"]
+    
+    # Si le weaker_device a des services que le merged n'a pas, les ajouter
+    if weaker_device.get("services") and not merged.get("services"):
+        merged["services"] = weaker_device["services"]
+    
+    # Si le weaker_device a des caractéristiques que le merged n'a pas, les ajouter
+    if weaker_device.get("characteristics") and not merged.get("characteristics"):
+        merged["characteristics"] = weaker_device["characteristics"]
+    
     return merged

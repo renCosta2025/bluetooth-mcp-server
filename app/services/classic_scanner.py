@@ -4,6 +4,7 @@ Sur Windows, cette fonctionnalité est limitée et fournit un message d'informat
 """
 import logging
 import platform
+import asyncio
 from typing import Dict, List, Optional, Any
 
 from app.utils.bluetooth_utils import get_friendly_device_name
@@ -42,7 +43,7 @@ else:
 class ClassicBTScanner:
     """Classe spécialisée dans le scan d'appareils Bluetooth classiques"""
     
-    def scan(self, duration: float = 5.0, filter_name: Optional[str] = None) -> List[Dict[str, Any]]:
+    def scan(self, duration: float = 10.0, filter_name: Optional[str] = None) -> List[Dict[str, Any]]:
         """
         Effectue un scan Bluetooth classique.
         
@@ -110,7 +111,8 @@ class ClassicBTScanner:
                         "device_class": device_class,
                         "major_device_class": major_class,
                         "minor_device_class": minor_class,
-                        "service_classes": service_classes
+                        "service_classes": service_classes,
+                        "detected_by": "classic_scanner"
                     }
                     
                     devices.append(bluetooth_device)
@@ -120,6 +122,20 @@ class ClassicBTScanner:
         except Exception as e:
             logger.error(f"Erreur lors du scan Bluetooth classique: {str(e)}", exc_info=True)
             return []
+    
+    async def scan_async(self, duration: float = 10.0, filter_name: Optional[str] = None) -> List[Dict[str, Any]]:
+        """
+        Version asynchrone du scan Bluetooth classique.
+        
+        Args:
+            duration: Durée du scan en secondes
+            filter_name: Filtre optionnel sur le nom des appareils
+            
+        Returns:
+            Liste de dictionnaires contenant les informations des appareils Bluetooth classiques détectés
+        """
+        # Exécuter le scan synchrone dans un thread pour ne pas bloquer la boucle d'événements
+        return await asyncio.to_thread(self.scan, duration, filter_name)
             
     def _decode_device_class(self, device_class: int) -> tuple:
         """

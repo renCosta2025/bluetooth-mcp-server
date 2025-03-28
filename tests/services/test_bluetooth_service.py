@@ -96,3 +96,90 @@ async def test_scan_error_handling():
         
         # Vérification du message d'erreur
         assert "Test error" in str(excinfo.value)
+
+@pytest.mark.asyncio
+async def test_duplicate_device_handling():
+    """Test pour vérifier que la gestion des appareils en double fonctionne correctement"""
+    # Import du service
+    from app.services.bluetooth_service import BluetoothService
+    from app.models.bluetooth import BluetoothDevice
+    
+    # Création de mock devices pour le test (ayant des informations complémentaires)
+    ble_device = {
+        "id": "00:11:22:33:44:55",
+        "address": "00:11:22:33:44:55",
+        "name": "Unknown",
+        "rssi": -75,
+        "manufacturer_data": {76: [0, 22, 1, 1]},
+        "service_uuids": ["0000180f-0000-1000-8000-00805f9b34fb"],
+        "device_type": "BLE",
+        "company_name": "Apple, Inc.",
+        "detected_by": "ble_scanner"
+    }
+    
+    classic_device = {
+        "id": "00:11:22:33:44:55",
+        "address": "00:11:22:33:44:55",
+        "name": "iPhone 13",
+        "rssi": -60,
+        "device_type": "Classic",
+        "detected_by": "classic_scanner"
+    }
+    
+    windows_device = {
+        "id": "WIN-PNP-DEVICE",
+        "address": "00:11:22:33:44:55",  # Même adresse MAC
+        "name": "iPhone",
+        "rssi": -70,
+        "device_type": "Windows-PnP",
+        "detected_by": "windows_pnp"
+    }
+    
+    # Mock pour les différents scanners
+    with patch('app.services.bluetooth_service.ble_scanner') as mock_ble_scanner, \
+         patch('app.services.bluetooth_service.classic_scanner') as mock_classic_scanner, \
+         patch('app.services.bluetooth_service.windows_scanner') as mock_windows_scanner, \
+         patch('app.services.bluetooth_service.IS_WINDOWS', return_value=True), \
+         patch('app.services.bluetooth_service.CLASSIC_BT_AVAILABLE', return_value=True):
+        
+        # Configuration des mocks pour renvoyer nos appareils de test
+        mock_ble_scanner.scan.return_value = [ble_device]
+        mock_classic_scanner.scan.return_value = [classic_device]
+        mock_windows_scanner.scan.return_value = [windows_device]
+        
+        # Instanciation du service
+        service = BluetoothService()
+        
+        # Test du scan avec fusion des doublons
+        devices = await service.scan_for_devices(
+            duration=5.0,
+            include_classic=True,
+            extended_freebox_detection=True,
+            deduplicate_devices=True
+        )
+        
+        # Vérification qu'un seul appareil est retourné (les doublons sont fusionnés)
+        assert len(devices) == 1
+        
+        # Vérification que les informations ont été correctement fusionnées
+        merged_device = devices[0]
+        assert merged_device.address == "00:11:22:33:44:55"
+        assert merged_device.name == "iPhone 13"  # Le nom le plus informatif est conservé
+        assert merged_device.rssi == -60  # Le RSSI le plus fort est conservé
+        assert 76 in merged_device.manufacturer_data  # Les données du fabricant sont conservées
+        assert "0000180f-0000-1000-8000-00805f9b34fb" in merged_device.service_uuids  # Les UUIDs sont conservés
+        assert merged_device.detection_sources is not None and len(merged_device.detection_sources) == 3
+        assert "ble_scanner" in merged_device.detection_sources
+        assert "classic_scanner" in merged_device.detection_sources
+        assert "windows_pnp" in merged_device.detection_sources
+        
+        # Test du scan sans fusion des doublons
+        devices_without_dedup = await service.scan_for_devices(
+            duration=5.0,
+            include_classic=True,
+            extended_freebox_detection=True,
+            deduplicate_devices=False
+        )
+        
+        # Vérification que trois appareils sont retournés (pas de fusion)
+        assert len(devices_without_dedup) == 3

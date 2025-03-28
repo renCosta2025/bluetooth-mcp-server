@@ -42,6 +42,14 @@ bluetooth_scan_tool = {
             "extended_freebox_detection": {
                 "type": "boolean",
                 "description": "If true, uses additional methods to detect Freebox devices (recommended for Freebox detection)"
+            },
+            "deduplicate_devices": {
+                "type": "boolean",
+                "description": "If true, merges duplicate devices with the same MAC address or similar attributes (recommended)"
+            },
+            "parallel_scans": {
+                "type": "boolean",
+                "description": "If true, executes different scan methods in parallel for faster results (default: true)"
             }
         }
     }
