@@ -1,124 +1,237 @@
-# architecture.md
+# Bluetooth MCP Server Architecture
 
-```markdown
-# Structure du Projet Bluetooth MCP Server
+<div align="center">
 
-Ce document présente la structure organisationnelle du projet de serveur MCP pour la détection Bluetooth.
-bluetooth-mcp-server/            # Dossier racine du projet
+![Architecture](https://img.shields.io/badge/Architecture-Document-blue?style=for-the-badge)
+
+**Detailed architectural overview of the Bluetooth MCP Server project**
+
+</div>
+
+## 📋 Overview
+
+This document outlines the architectural structure of the Bluetooth MCP Server project, which enables AI assistants to discover and interact with Bluetooth devices. The architecture follows a modular design with clear separation of concerns, adhering to best practices for Python applications.
+
+## 🏗️ Project Structure
+
+```
+bluetooth-mcp-server/            # Root project directory
 │
-├── app/                         # Package principal de l'application
-│   ├── init.py             # Initialise le package app
-│   ├── main.py                 # Point d'entrée de l'application FastAPI
+├── app/                         # Main application package
+│   ├── __init__.py              # Package initializer
+│   ├── main.py                  # FastAPI application entry point
 │   │
-│   ├── api/                    # Sous-package pour les points d'entrée API
-│   │   ├── init.py        # Initialise le package api
-│   │   ├── bluetooth.py       # Endpoints pour les opérations Bluetooth
-│   │   └── session.py         # Endpoints pour la gestion des sessions MCP
+│   ├── api/                     # API endpoints package
+│   │   ├── __init__.py          # Package initializer
+│   │   ├── bluetooth.py         # Bluetooth operation endpoints
+│   │   └── session.py           # MCP session management endpoints
 │   │
-│   ├── core/                   # Sous-package pour la configuration centrale
-│   │   ├── init.py        # Initialise le package core
-│   │   └── config.py          # Configuration de l'application
+│   ├── core/                    # Core configuration package
+│   │   ├── __init__.py          # Package initializer
+│   │   └── config.py            # Application configuration
 │   │
-│   ├── data/                   # Sous-package pour les données statiques
-│   │   ├── init.py        # Initialise le package data
-│   │   ├── company_identifiers.py  # Base de données des identifiants de fabricants
-│   │   └── mac_prefixes.py    # Base de données des préfixes d'adresses MAC
+│   ├── data/                    # Static data package
+│   │   ├── __init__.py          # Package initializer
+│   │   ├── company_identifiers.py  # Bluetooth manufacturer IDs database
+│   │   └── mac_prefixes.py      # MAC address prefix database
 │   │
-│   ├── models/                 # Sous-package pour les modèles de données
-│   │   ├── init.py        # Initialise le package models
-│   │   ├── bluetooth.py       # Modèles pour les données Bluetooth
-│   │   └── session.py         # Modèles pour les données de session
+│   ├── models/                  # Data models package
+│   │   ├── __init__.py          # Package initializer
+│   │   ├── bluetooth.py         # Bluetooth data models
+│   │   └── session.py           # Session data models
 │   │
-│   ├── services/               # Sous-package pour la logique métier
-│   │   ├── init.py        # Initialise le package services
-│   │   ├── bluetooth_service.py # Service principal pour les opérations Bluetooth
-│   │   ├── ble_scanner.py     # Scanner BLE
-│   │   ├── classic_scanner.py # Scanner Bluetooth classique
-│   │   ├── windows_scanner.py # Scanner Bluetooth spécifique à Windows
-│   │   └── windows_advanced_scanner.py # Scanner avancé pour Windows
+│   ├── services/                # Business logic package
+│   │   ├── __init__.py          # Package initializer
+│   │   ├── bluetooth_service.py # Main Bluetooth operations service
+│   │   ├── ble_scanner.py       # BLE scanning service
+│   │   ├── classic_scanner.py   # Classic Bluetooth scanning service
+│   │   ├── windows_scanner.py   # Windows-specific scanner
+│   │   └── windows_advanced_scanner.py # Enhanced Windows scanner
 │   │
-│   └── utils/                  # Sous-package pour les utilitaires
-│       ├── init.py        # Initialise le package utils
-│       └── bluetooth_utils.py # Utilitaires pour le traitement des données Bluetooth
+│   └── utils/                   # Utilities package
+│       ├── __init__.py          # Package initializer
+│       └── bluetooth_utils.py   # Bluetooth utility functions
 │
-├── mcp_sdk/                    # Package pour le SDK MCP
-│   ├── init.py            # Initialise le package mcp_sdk
-│   ├── bluetooth_tool.py      # Implémentation de l'outil Bluetooth pour MCP
-│   ├── setup.py               # Configuration pour l'installation du package
-│   └── tests/                 # Tests pour le SDK
-│       ├── init.py        # Initialise le package tests
-│       └── test_bluetooth_tool.py # Tests pour l'outil Bluetooth
+├── mcp_sdk/                     # MCP SDK package
+│   ├── __init__.py              # Package initializer
+│   ├── bluetooth_tool.py        # MCP Bluetooth tool implementation
+│   ├── setup.py                 # Package installation configuration
+│   └── tests/                   # SDK tests
+│       ├── __init__.py          # Package initializer
+│       └── test_bluetooth_tool.py # Bluetooth tool tests
 │
-├── tests/                      # Tests unitaires et d'intégration
-│   ├── init.py            # Initialise le package tests
-│   ├── test_main.py           # Tests pour l'application principale
-│   ├── TEST.md                # Documentation sur l'état des tests
+├── tests/                       # Test suites
+│   ├── __init__.py              # Package initializer
+│   ├── test_main.py             # Main application tests
+│   ├── TEST.md                  # Test status documentation
 │   │
-│   ├── api/                   # Tests pour les API
-│   │   ├── init.py        # Initialise le package tests.api
-│   │   ├── test_bluetooth.py  # Tests pour l'API Bluetooth
-│   │   └── test_session.py    # Tests pour l'API Session
+│   ├── api/                     # API tests package
+│   │   ├── __init__.py          # Package initializer
+│   │   ├── test_bluetooth.py    # Bluetooth API tests
+│   │   └── test_session.py      # Session API tests
 │   │
-│   ├── models/                # Tests pour les modèles
-│   │   ├── init.py        # Initialise le package tests.models
-│   │   ├── test_bluetooth_model.py # Tests pour les modèles Bluetooth
-│   │   └── test_session_model.py # Tests pour les modèles Session
+│   ├── models/                  # Model tests package
+│   │   ├── __init__.py          # Package initializer
+│   │   ├── test_bluetooth_model.py # Bluetooth model tests
+│   │   └── test_session_model.py # Session model tests
 │   │
-│   ├── services/              # Tests pour les services
-│   │   ├── init.py        # Initialise le package tests.services
-│   │   ├── test_bluetooth_service.py # Tests pour le service Bluetooth
-│   │   └── test_classic_bluetooth.py # Tests pour le scanner Bluetooth classique
+│   ├── services/                # Service tests package
+│   │   ├── __init__.py          # Package initializer
+│   │   ├── test_bluetooth_service.py # Bluetooth service tests
+│   │   └── test_classic_bluetooth.py # Classic Bluetooth tests
 │   │
-│   └── utils/                 # Tests pour les utilitaires
-│       ├── init.py        # Initialise le package tests.utils
-│       └── test_bluetooth_utils.py # Tests pour les utilitaires Bluetooth
+│   └── utils/                   # Utility tests package
+│       ├── __init__.py          # Package initializer
+│       └── test_bluetooth_utils.py # Bluetooth utilities tests
 │
-├── .env                        # Variables d'environnement (local)
-├── .env.example                # Exemple de variables d'environnement
-├── run.py                      # Script pour démarrer l'application
-├── bluetooth_mcp_server.py     # Script pour démarrer le serveur MCP
-├── architecture.md             # Documentation de l'architecture
-├── bluetooth-mcp-guide.md      # Guide d'implémentation du serveur MCP
-├── requirements.txt            # Dépendances du projet
-└── README.md                   # Documentation du projet
-Copier
-## Description des composants principaux
+├── .env                         # Local environment variables
+├── .env.example                 # Environment variables example
+├── run.py                       # Application startup script
+├── bluetooth_mcp_server.py      # MCP server startup script
+├── requirements.txt             # Project dependencies
+├── architecture.md              # This architecture document
+└── README.md                    # Project documentation
+```
 
-### Fichiers racine
-- **run.py**: Script de démarrage du serveur FastAPI
-- **bluetooth_mcp_server.py**: Script de démarrage du serveur MCP intégré avec l'API Bluetooth
-- **.env**: Configuration des variables d'environnement (non versionné)
-- **.env.example**: Exemple de configuration des variables d'environnement
-- **requirements.txt**: Liste des dépendances Python
-- **README.md**: Documentation principale du projet
-- **architecture.md**: Documentation de la structure du projet
-- **bluetooth-mcp-guide.md**: Guide détaillé d'implémentation
+## 🧩 Component Descriptions
 
-### Package app
-- **main.py**: Configure et initialise l'application FastAPI
+### 🔄 Core Components
 
-### Sous-package api
-- **bluetooth.py**: Endpoints pour les opérations de scan Bluetooth
-- **session.py**: Endpoints pour la gestion des sessions MCP
+#### `run.py`
+Entry point script for starting the FastAPI server, using environment variables for configuration.
 
-### Sous-package data
-- **company_identifiers.py**: Base de données des identifiants de fabricants Bluetooth
-- **mac_prefixes.py**: Base de données des préfixes d'adresses MAC pour identifier les appareils
+#### `bluetooth_mcp_server.py`
+Entry point script for the MCP server that integrates with the Bluetooth API.
 
-### Sous-package models
-- **bluetooth.py**: Modèles Pydantic pour les données Bluetooth
-- **session.py**: Modèles Pydantic pour les sessions MCP
+#### `app/main.py`
+Configures and initializes the FastAPI application, sets up CORS, and includes routers.
 
-### Sous-package services
-- **bluetooth_service.py**: Service principal orchestrant les différents scanners
-- **ble_scanner.py**: Scanner pour les appareils BLE (Bluetooth Low Energy)
-- **classic_scanner.py**: Scanner pour les appareils Bluetooth classiques
-- **windows_scanner.py**: Scanner spécifique pour Windows
-- **windows_advanced_scanner.py**: Scanner avancé pour Windows utilisant des API natives
+### 🌐 API Layer (`app/api/`)
 
-### Sous-package utils
-- **bluetooth_utils.py**: Fonctions utilitaires pour le traitement des données Bluetooth
+#### `bluetooth.py`
+Provides REST endpoints for Bluetooth scanning operations:
+- POST `/mcp/v1/tools/bluetooth-scan`: Standard Bluetooth scan
+- POST `/mcp/v1/tools/bluetooth-scan-fast`: Optimized for speed
+- POST `/mcp/v1/tools/bluetooth-scan-thorough`: Optimized for device discovery
 
-### Package mcp_sdk
-- **bluetooth_tool.py**: Implémentation de l'outil Bluetooth pour le SDK MCP
-- **setup.py**: Configuration pour l'installation du package SDK
+#### `session.py`
+Handles MCP session management:
+- POST `/mcp/v1/session`: Creates a new MCP session and returns available tools
+
+### 📊 Data Models (`app/models/`)
+
+#### `bluetooth.py`
+Pydantic models for Bluetooth data:
+- `BluetoothDevice`: Represents a discovered Bluetooth device
+- `BluetoothScanParams`: Parameters for scan operations
+- `ScanResponse`: Container for scan results
+
+#### `session.py`
+Models for MCP session handling:
+- `SessionResponse`: Represents the MCP session response
+- `bluetooth_scan_tool`: Defines the Bluetooth tool for MCP
+
+### 🔧 Services (`app/services/`)
+
+#### `bluetooth_service.py`
+Orchestrates the different Bluetooth scanners and manages device data:
+- Handles device deduplication
+- Merges information from different scan sources
+- Provides platform-specific optimizations
+
+#### `ble_scanner.py`
+BLE-specific scanning service using Bleak library.
+
+#### `classic_scanner.py`
+Classic Bluetooth scanning service, with fallback modes for different platforms.
+
+#### `windows_scanner.py`
+Windows-specific scanner using native Windows APIs.
+
+#### `windows_advanced_scanner.py`
+Enhanced Windows scanner for detecting special devices (TVs, Freebox, etc.).
+
+### 🛠️ Utilities (`app/utils/`)
+
+#### `bluetooth_utils.py`
+Helper functions for Bluetooth operations:
+- MAC address normalization
+- Manufacturer data formatting
+- Device name deduction
+- Device information merging
+
+### 📚 Static Data (`app/data/`)
+
+#### `company_identifiers.py`
+Database of Bluetooth manufacturer identifiers.
+
+#### `mac_prefixes.py`
+Database of MAC address prefixes for device identification.
+
+### 🔌 MCP SDK (`mcp_sdk/`)
+
+#### `bluetooth_tool.py`
+Implementation of the Bluetooth tool for the MCP protocol.
+
+### 🧪 Tests (`tests/`)
+
+Test suites following the same structure as the application code, adhering to Test-Driven Development principles.
+
+## 🔄 Data Flow
+
+1. **Client Request** → The MCP client (Claude) sends a tool execution request
+2. **MCP Server** → Processes the request and calls the appropriate Bluetooth API endpoint
+3. **API Endpoint** → Validates parameters and calls the Bluetooth service
+4. **Bluetooth Service** → Orchestrates the appropriate scanners based on parameters
+5. **Scanners** → Execute device discovery using platform-specific methods
+6. **Device Processing** → Discovered devices are processed, deduplicated, and enhanced
+7. **Response** → Results are returned through the service → API → MCP chain
+
+## 🔒 Configuration Management
+
+The application uses a hierarchical configuration approach:
+
+1. **Default values** hardcoded in the application
+2. **.env file** for environment-specific configuration
+3. **Environment variables** that can override file settings
+4. **Runtime parameters** passed to API endpoints
+
+## 🔄 Dependency Injection
+
+The project uses a simple form of dependency injection:
+
+- Services are instantiated as singletons
+- API endpoints access services through imports
+- Test mocks replace real implementations for testing
+
+## 🧩 Extension Points
+
+The architecture is designed to be extendable:
+
+1. **Adding new scan methods**: Implement a new scanner in `app/services/`
+2. **Supporting new device types**: Extend the databases in `app/data/`
+3. **Adding new MCP tools**: Implement new tools in `mcp_sdk/`
+4. **Enhanced device information**: Extend the `BluetoothDevice` model
+
+## 📈 Performance Considerations
+
+- **Parallel scanning**: Multiple scan methods run concurrently
+- **Scan duration control**: Adjustable to balance speed vs. thoroughness
+- **Device deduplication**: Optimizes result size and clarity
+- **Platform-specific optimizations**: Maximizes performance on each OS
+
+## 🔐 Security Considerations
+
+- **Limited scope**: The server only performs Bluetooth scanning operations
+- **Input validation**: All parameters are validated using Pydantic models
+- **Error handling**: Proper exception handling prevents information leakage
+- **No persistent storage**: No sensitive data is stored between requests
+
+## 🔄 Testing Strategy
+
+The project follows a Test-Driven Development (TDD) approach:
+
+1. **Unit Tests**: For individual components (models, utilities)
+2. **Integration Tests**: For service interactions
+3. **API Tests**: For endpoint behavior
+4. **Mocking**: External dependencies are mocked for reliable testing
