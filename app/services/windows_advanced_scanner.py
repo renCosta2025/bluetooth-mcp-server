@@ -257,7 +257,9 @@ class WindowsAdvancedScanner:
                     device_class = match.group(4).strip()
                     
                     # Créer un ID unique pour l'appareil
-                    unique_id = f"WIN-DM-{device_id.replace('&', '-').replace('\\', '-')}"
+                    clean_device_id = device_id.replace('&', '-').replace('\\', '-')
+                    unique_id = f"WIN-DM-{clean_device_id}"
+
                     
                     # Essayer d'extraire une adresse MAC si présente
                     mac_match = re.search(r'([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})', device_id)
@@ -438,7 +440,9 @@ class WindowsAdvancedScanner:
                         continue
                     
                     # Créer un ID unique pour l'appareil
-                    unique_id = f"WIN-PS-{device_id.replace('#', '-').replace('\\', '-')}"
+                    clean_device_id = device_id.replace('#', '-').replace('\\', '-')  # Nettoyage des caractères
+                    unique_id = f"WIN-PS-{clean_device_id}"  # Création de l'identifiant
+
                     
                     # Essayer d'extraire une adresse MAC si présente
                     mac_match = re.search(r'([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})', device_id)
@@ -562,7 +566,8 @@ class WindowsAdvancedScanner:
                     status = radio_match.group(3).strip()
                     
                     # Créer un ID unique pour l'appareil
-                    unique_id = f"WIN-RADIO-{device_id.replace('&', '-').replace('\\', '-')}"
+                    clean_device_id = device_id.replace('&', '-').replace('\\', '-')  # Nettoyage des caractères
+                    unique_id = f"WIN-RADIO-{clean_device_id}"  # Construction de l'identifiant
                     
                     # Vérifier si c'est une radio active
                     if status == "OK":
