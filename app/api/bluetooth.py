@@ -20,13 +20,11 @@ def simplify_devices(devices):
             "name": getattr(d, "friendly_name", getattr(d, "address", None)), # get name or friendly-name, fallback to address, or None if any of the info available.
             "address": getattr(d, "address", None),
             "rssi": getattr(d, "rssi", None),
-            # "manufacturer_data": getattr(d, "manufacturer_data", {})
+            "manufacturer_data": getattr(d, "manufacturer_data", {})
         }
         for d in devices
     ]
-    # simplified.sort(key=lambda d: d["rssi"] if d["rssi"] is not None else -999, reverse=True)
-    simplified.sort(key=lambda d: d["address"] if d["name"] is not None else -999, reverse=False)
-    # simplified.sort(key=lambda d: d["name"] if d["name"] is not None else "a" | "A", reverse=False)
+    simplified.sort(key=lambda d: d["rssi"] if d["rssi"] is not None else -999, reverse=True)
     return simplified
 
 
