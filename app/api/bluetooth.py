@@ -1,41 +1,58 @@
 """
-Points d'entrée API pour les opérations Bluetooth.
+API entry points for Bluetooth operations.
 """
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException
 from app.models.bluetooth import BluetoothScanParams, ScanResponse
 from app.services.bluetooth_service import bluetooth_service, BluetoothScanError
 
-# Création du router FastAPI
+# Create FastAPI router
 router = APIRouter()
 
-@router.post("/mcp/v1/tools/bluetooth-scan", response_model=ScanResponse, 
-             description="Scanne les appareils Bluetooth à proximité. "
-                         "Utilisez filter_name=null ou omettez le champ pour voir tous les appareils.")
+
+def simplify_devices(devices):
+    """
+    Simplifies the device list for cleaner JSON output.
+    Also sorts by descending RSSI (strongest signal first).
+    """
+    simplified = [
+        {
+            "id": getattr(d, "name", None),
+            "name": getattr(d, "friendly_name", getattr(d, "address", None)), # get name or friendly-name, fallback to address, or None if any of the info available.
+            "address": getattr(d, "address", None),
+            "rssi": getattr(d, "rssi", None),
+            # "manufacturer_data": getattr(d, "manufacturer_data", {})
+        }
+        for d in devices
+    ]
+    # simplified.sort(key=lambda d: d["rssi"] if d["rssi"] is not None else -999, reverse=True)
+    simplified.sort(key=lambda d: d["address"] if d["name"] is not None else -999, reverse=False)
+    # simplified.sort(key=lambda d: d["name"] if d["name"] is not None else "a" | "A", reverse=False)
+    return simplified
+
+
+
+
+@router.post(
+    "/mcp/v1/tools/bluetooth-scan",
+    response_model=ScanResponse,
+    description="Scan nearby Bluetooth devices."
+)
 async def execute_bluetooth_scan(params: BluetoothScanParams):
     """
-    Endpoint pour exécuter l'outil de scan Bluetooth.
-    Détecte les appareils BLE et Bluetooth classiques à proximité.
+    Endpoint to perform a Bluetooth scan.
     
     Args:
-        params: Paramètres pour le scan
-          - duration: Durée du scan en secondes (défaut: 5.0)
-          - filter_name: Filtre optionnel sur le nom des appareils (null pour voir tous les appareils)
-          - connect_for_details: Si True, tente de se connecter à chaque appareil (défaut: False)
-          - include_classic: Si True, inclut les appareils Bluetooth classiques (défaut: True)
-          - extended_freebox_detection: Si True, utilise des méthodes supplémentaires pour détecter les Freebox (défaut: True)
-          - deduplicate_devices: Si True, fusionne les appareils en double (défaut: True)
-          - parallel_scans: Si True, exécute les scans en parallèle (défaut: True)
-        
+        params: Scan parameters, including duration, filters, and options.
+    
     Returns:
-        Liste des appareils détectés
-        
+        List of detected devices.
+    
     Raises:
-        HTTPException: En cas d'erreur pendant le scan
+        HTTPException: If an error occurs during scanning.
     """
     try:
-        # Utilisation du service Bluetooth pour effectuer le scan
         devices = await bluetooth_service.scan_for_devices(
-            duration=params.duration, 
+            duration=params.duration,
             filter_name=params.filter_name,
             connect_for_details=params.connect_for_details,
             include_classic=params.include_classic,
@@ -43,42 +60,42 @@ async def execute_bluetooth_scan(params: BluetoothScanParams):
             deduplicate_devices=params.deduplicate_devices,
             parallel_scans=params.parallel_scans
         )
-        
-        # Retourne les résultats
-        return ScanResponse(devices=devices)
+        return ScanResponse(devices=simplify_devices(devices))
+
     except BluetoothScanError as e:
-        # Conversion en HTTPException pour FastAPI
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.post("/mcp/v1/tools/bluetooth-scan-fast", response_model=ScanResponse, 
-             description="Scanne les appareils Bluetooth à proximité avec des paramètres optimisés pour la rapidité.")
+
+@router.post(
+    "/mcp/v1/tools/bluetooth-scan-fast",
+    response_model=ScanResponse,
+    description="Quick scan of nearby Bluetooth devices."
+)
 async def execute_fast_bluetooth_scan(params: BluetoothScanParams = None):
     """
-    Endpoint pour un scan Bluetooth rapide.
-    Utilise des paramètres optimisés pour une détection rapide des appareils.
+    Endpoint for a fast Bluetooth scan.
+    Uses parameters optimised for speed.
     
     Args:
-        params: Paramètres pour le scan (optionnel)
-        
+        params: Optional scan parameters.
+    
     Returns:
-        Liste des appareils détectés
-        
+        List of detected devices.
+    
     Raises:
-        HTTPException: En cas d'erreur pendant le scan
+        HTTPException: If an error occurs during scanning.
     """
     try:
-        # Utiliser des paramètres par défaut optimisés pour la rapidité
         if params is None:
             params = BluetoothScanParams()
-        
-        # Forcer l'utilisation des scans parallèles pour une meilleure performance
+
+        # Optimise for speed
         params.parallel_scans = True
-        params.duration = params.duration or 3.0  # Scan plus court
-        params.connect_for_details = False  # Pas de connexion pour plus de rapidité
-        
-        # Utilisation du service Bluetooth pour effectuer le scan
+        params.duration = params.duration or 3.0
+        params.connect_for_details = False
+
         devices = await bluetooth_service.scan_for_devices(
-            duration=params.duration, 
+            duration=params.duration,
             filter_name=params.filter_name,
             connect_for_details=params.connect_for_details,
             include_classic=params.include_classic,
@@ -86,44 +103,44 @@ async def execute_fast_bluetooth_scan(params: BluetoothScanParams = None):
             deduplicate_devices=params.deduplicate_devices,
             parallel_scans=params.parallel_scans
         )
-        
-        # Retourne les résultats
-        return ScanResponse(devices=devices)
+        return ScanResponse(devices=simplify_devices(devices))
+
     except BluetoothScanError as e:
-        # Conversion en HTTPException pour FastAPI
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.post("/mcp/v1/tools/bluetooth-scan-thorough", response_model=ScanResponse, 
-             description="Scanne les appareils Bluetooth à proximité avec des paramètres optimisés pour une détection complète.")
+
+@router.post(
+    "/mcp/v1/tools/bluetooth-scan-thorough",
+    response_model=ScanResponse,
+    description="Thorough scan of nearby Bluetooth devices."
+)
 async def execute_thorough_bluetooth_scan(params: BluetoothScanParams = None):
     """
-    Endpoint pour un scan Bluetooth approfondi.
-    Utilise des paramètres optimisés pour détecter un maximum d'appareils, y compris les plus difficiles à détecter.
+    Endpoint for a thorough Bluetooth scan.
+    Uses parameters optimised to detect as many devices as possible.
     
     Args:
-        params: Paramètres pour le scan (optionnel)
-        
+        params: Optional scan parameters.
+    
     Returns:
-        Liste des appareils détectés
-        
+        List of detected devices.
+    
     Raises:
-        HTTPException: En cas d'erreur pendant le scan
+        HTTPException: If an error occurs during scanning.
     """
     try:
-        # Utiliser des paramètres par défaut optimisés pour une détection complète
         if params is None:
             params = BluetoothScanParams()
-        
-        # Forcer l'utilisation des paramètres optimaux pour une détection approfondie
-        params.duration = params.duration or 10.0  # Scan plus long
-        params.include_classic = True  # Activer le scan classique
-        params.extended_freebox_detection = True  # Activer la détection étendue
-        params.deduplicate_devices = True  # Activer la déduplication
-        params.connect_for_details = True  # Activer la connexion pour plus de détails
-        
-        # Utilisation du service Bluetooth pour effectuer le scan
+
+        # Parameters for complete detection
+        params.duration = params.duration or 10.0
+        params.include_classic = True
+        params.extended_freebox_detection = True
+        params.deduplicate_devices = True
+        params.connect_for_details = True
+
         devices = await bluetooth_service.scan_for_devices(
-            duration=params.duration, 
+            duration=params.duration,
             filter_name=params.filter_name,
             connect_for_details=params.connect_for_details,
             include_classic=params.include_classic,
@@ -131,9 +148,7 @@ async def execute_thorough_bluetooth_scan(params: BluetoothScanParams = None):
             deduplicate_devices=params.deduplicate_devices,
             parallel_scans=params.parallel_scans
         )
-        
-        # Retourne les résultats
-        return ScanResponse(devices=devices)
+        return ScanResponse(devices=simplify_devices(devices))
+
     except BluetoothScanError as e:
-        # Conversion en HTTPException pour FastAPI
         raise HTTPException(status_code=500, detail=str(e))
